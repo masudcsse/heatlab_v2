@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import PlaceSearch from "./components/PlaceSearch";
+import PlaceAutocomplete from "./components/PlaceAutocomplete";
 import ActivityPreferenceSelect from "./components/ActivityPreferenceSelect";
 import PlaceTypeSelect from "./components/PlaceTypeSelect";
 import LoadingState from "./components/LoadingState";
@@ -134,7 +134,7 @@ function App() {
           </div>
 
           <div className="search-card">
-            <PlaceSearch
+            <PlaceAutocomplete
               selectedPlace={selectedPlace}
               onPlaceSelected={setSelectedPlace}
             />
@@ -146,7 +146,11 @@ function App() {
 
             <PlaceTypeSelect value={placeType} onChange={setPlaceType} />
 
-            <button className="primary-button" onClick={handleFindBestPlace}>
+            <button
+              className="primary-button"
+              onClick={handleFindBestPlace}
+              disabled={!selectedPlace || loading}
+            >
               Find Best Place
             </button>
           </div>

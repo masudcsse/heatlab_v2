@@ -71,6 +71,7 @@ body {
 
 .search-card {
   position: relative;
+  z-index: 1;
   background: #fbf9fb;
   color: #334155;
   border-radius: 28px;
@@ -113,6 +114,11 @@ body {
   background: #f2553c;
 }
 
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .main-container {
   max-width: 1150px;
   margin: 0 auto;
@@ -141,6 +147,42 @@ body {
 
 .place-search {
   position: relative;
+}
+
+.place-autocomplete small {
+  display: block;
+  margin-top: 8px;
+}
+
+.gmp-place-autocomplete {
+  width: 100%;
+}
+
+.pac-container {
+  z-index: 3000 !important;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+.setup-checklist {
+  margin-top: 10px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 12px;
+  padding: 12px;
+  color: #7c2d12;
+  font-size: 0.88rem;
+}
+
+.setup-checklist strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.setup-checklist ol {
+  margin: 0;
+  padding-left: 18px;
 }
 
 .prediction-list {

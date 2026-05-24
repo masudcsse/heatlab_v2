@@ -1,42 +1,9 @@
+import { loadGooglePlacesScript } from "./googlePlaces";
+
 const BAMBERG_CENTER = {
   lat: 49.8988,
   lng: 10.9028,
 };
-
-let googleMapsPromise = null;
-
-export function loadGoogleMapsScript() {
-  if (window.google && window.google.maps && window.google.maps.places) {
-    return Promise.resolve(window.google);
-  }
-
-  if (googleMapsPromise) {
-    return googleMapsPromise;
-  }
-
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-  if (!apiKey) {
-    return Promise.reject(
-      new Error("Missing VITE_GOOGLE_MAPS_API_KEY. Create a .env file first.")
-    );
-  }
-
-  googleMapsPromise = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-
-    script.onload = () => resolve(window.google);
-    script.onerror = () =>
-      reject(new Error("Google Maps script failed to load. Check your API key."));
-
-    document.head.appendChild(script);
-  });
-
-  return googleMapsPromise;
-}
 
 export async function searchBambergPlaces(query) {
   if (!query || query.trim().length < 2) {
@@ -47,7 +14,7 @@ export async function searchBambergPlaces(query) {
   // or returns REQUEST_DENIED (legacy API / billing / key issues), fall back
   // to the Places Web Service (HTTP) as a pragmatic workaround for development.
   try {
-    const google = await loadGoogleMapsScript();
+    const google = await loadGooglePlacesScript();
 
     if (google && google.maps && google.maps.places && google.maps.places.AutocompleteService) {
       const service = new google.maps.places.AutocompleteService();
@@ -82,14 +49,14 @@ export async function searchBambergPlaces(query) {
   // expose the key in client requests — acceptable for local dev but for
   // production you should proxy requests through your server and keep the
   // key private.
-  return fetchPlaceAutocomplete(import.meta.env.VITE_GOOGLE_MAPS_API_KEY, query);
+  return fetchPlaceAutocomplete(import.meta.env.VITE_GOOGLE_PLACES_API_KEY, query);
 }
 
 export async function getPlaceDetails(placeId) {
   // Try client-side PlacesService first; otherwise fall back to the Place Details
   // Web Service (HTTP).
   try {
-    const google = await loadGoogleMapsScript();
+    const google = await loadGooglePlacesScript();
     if (google && google.maps && google.maps.places) {
       const dummyDiv = document.createElement("div");
       const service = new google.maps.places.PlacesService(dummyDiv);
@@ -125,7 +92,7 @@ export async function getPlaceDetails(placeId) {
     // fallback to HTTP below
   }
 
-  return fetchPlaceDetails(import.meta.env.VITE_GOOGLE_MAPS_API_KEY, placeId);
+  return fetchPlaceDetails(import.meta.env.VITE_GOOGLE_PLACES_API_KEY, placeId);
 }
 
 // --- HTTP fallback helpers ---
@@ -180,7 +147,7 @@ async function fetchPlaceDetails(apiKey, placeId) {
 }
 
 export async function getNearbyPlaces(lat, lng, radiusKm, placeType) {
-  const google = await loadGoogleMapsScript();
+  const google = await loadGooglePlacesScript();
   const dummyDiv = document.createElement("div");
   const service = new google.maps.places.PlacesService(dummyDiv);
 

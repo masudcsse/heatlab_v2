@@ -20,7 +20,7 @@ http://localhost:5173
 Create a `.env` file in the project root:
 
 ```env
-VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+VITE_GOOGLE_PLACES_API_KEY=your_google_api_key
 VITE_API_BASE_URL=http://localhost:5000
 ```
 
