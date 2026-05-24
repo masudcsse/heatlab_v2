@@ -1,148 +1,73 @@
-import { loadGooglePlacesScript } from "./googlePlaces";
-
-const BAMBERG_CENTER = {
-  lat: 49.8988,
-  lng: 10.9028,
-};
+import {
+  getBambergLocationRestriction,
+  importPlacesLibrary,
+  loadGooglePlacesScript,
+  normalizePlace,
+} from "./googlePlaces";
 
 export async function searchBambergPlaces(query) {
   if (!query || query.trim().length < 2) {
     return [];
   }
 
-  // Try client-side Maps AutocompleteService first. If it's unavailable
-  // or returns REQUEST_DENIED (legacy API / billing / key issues), fall back
-  // to the Places Web Service (HTTP) as a pragmatic workaround for development.
-  try {
-    const google = await loadGooglePlacesScript();
+  const { AutocompleteSuggestion, AutocompleteSessionToken } =
+    await importPlacesLibrary();
 
-    if (google && google.maps && google.maps.places && google.maps.places.AutocompleteService) {
-      const service = new google.maps.places.AutocompleteService();
+  const trimmedQuery = query.trim();
+  const bambergQuery = trimmedQuery.toLowerCase().includes("bamberg")
+    ? trimmedQuery
+    : `${trimmedQuery} Bamberg`;
 
-      return await new Promise((resolve, reject) => {
-        service.getPlacePredictions(
-          {
-            input: `${query} Bamberg Germany`,
-            componentRestrictions: { country: "de" },
-            location: new google.maps.LatLng(BAMBERG_CENTER.lat, BAMBERG_CENTER.lng),
-            radius: 10000,
-            types: ["establishment"],
-          },
-          (predictions, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK) {
-              resolve(predictions || []);
-            } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-              resolve([]);
-            } else {
-              // If service rejects due to legacy API or key, fall back to HTTP API
-              reject(new Error(status));
-            }
-          }
-        );
-      });
-    }
-  } catch (e) {
-    // continue to HTTP fallback
-  }
+  const response = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+    input: bambergQuery,
+    includedRegionCodes: ["de"],
+    locationRestriction: getBambergLocationRestriction(),
+    region: "de",
+    sessionToken: new AutocompleteSessionToken(),
+  });
 
-  // Fallback: call the Places Autocomplete Web Service (HTTP). This will
-  // expose the key in client requests — acceptable for local dev but for
-  // production you should proxy requests through your server and keep the
-  // key private.
-  return fetchPlaceAutocomplete(import.meta.env.VITE_GOOGLE_PLACES_API_KEY, query);
+  return (response.suggestions || [])
+    .filter((suggestion) => suggestion.placePrediction)
+    .map((suggestion) => {
+      const prediction = suggestion.placePrediction;
+      const mainText =
+        prediction.mainText?.text ||
+        prediction.mainText?.toString?.() ||
+        prediction.text?.text ||
+        prediction.text?.toString?.() ||
+        "";
+      const secondaryText =
+        prediction.secondaryText?.text ||
+        prediction.secondaryText?.toString?.() ||
+        "";
+
+      return {
+        place_id: prediction.placeId,
+        description: prediction.text?.text || prediction.text?.toString?.() || "",
+        structured_formatting: {
+          main_text: mainText,
+          secondary_text: secondaryText,
+        },
+      };
+    });
 }
 
 export async function getPlaceDetails(placeId) {
-  // Try client-side PlacesService first; otherwise fall back to the Place Details
-  // Web Service (HTTP).
-  try {
-    const google = await loadGooglePlacesScript();
-    if (google && google.maps && google.maps.places) {
-      const dummyDiv = document.createElement("div");
-      const service = new google.maps.places.PlacesService(dummyDiv);
+  const { Place } = await importPlacesLibrary();
+  const place = new Place({ id: placeId });
 
-      return await new Promise((resolve, reject) => {
-        service.getDetails(
-          {
-            placeId,
-            fields: ["place_id", "name", "formatted_address", "geometry", "types"],
-          },
-          (place, status) => {
-            if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
-              reject(new Error(status));
-              return;
-            }
+  await place.fetchFields({
+    fields: ["id", "displayName", "formattedAddress", "location", "types"],
+  });
 
-            resolve({
-              id: place.place_id,
-              googlePlaceId: place.place_id,
-              name: place.name,
-              address: place.formatted_address,
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-              types: place.types || [],
-              category: detectPlaceCategory(place.types || []),
-              source: "google_places",
-            });
-          }
-        );
-      });
-    }
-  } catch (e) {
-    // fallback to HTTP below
+  const normalizedPlace = normalizePlace(place);
+  if (!normalizedPlace) {
+    throw new Error("Place details failed: missing place geometry.");
   }
 
-  return fetchPlaceDetails(import.meta.env.VITE_GOOGLE_PLACES_API_KEY, placeId);
-}
-
-// --- HTTP fallback helpers ---
-async function fetchPlaceAutocomplete(apiKey, query) {
-  if (!apiKey) return [];
-
-  const input = encodeURIComponent(`${query} Bamberg Germany`);
-  const location = `${BAMBERG_CENTER.lat},${BAMBERG_CENTER.lng}`;
-  const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${input}&key=${apiKey}&components=country:de&location=${location}&radius=10000&types=establishment`;
-
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.status === "OK") {
-      // Normalize to the same shape as the Maps JS predictions when possible
-      return (data.predictions || []).map((p) => ({
-        place_id: p.place_id,
-        description: p.description,
-        structured_formatting: p.structured_formatting || {},
-      }));
-    }
-
-    return [];
-  } catch (err) {
-    return [];
-  }
-}
-
-async function fetchPlaceDetails(apiKey, placeId) {
-  if (!apiKey) throw new Error("Missing API key for place details");
-
-  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=place_id,name,formatted_address,geometry,types&key=${apiKey}`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-  if (data.status !== "OK" || !data.result) {
-    throw new Error(`Place details failed: ${data.status}`);
-  }
-
-  const place = data.result;
   return {
-    id: place.place_id,
-    googlePlaceId: place.place_id,
-    name: place.name,
-    address: place.formatted_address,
-    lat: place.geometry.location.lat,
-    lng: place.geometry.location.lng,
-    types: place.types || [],
-    category: detectPlaceCategory(place.types || []),
-    source: "google_places",
+    ...normalizedPlace,
+    category: detectPlaceCategory(normalizedPlace.types || []),
   };
 }
 
@@ -178,7 +103,7 @@ function nearbySearchByType(service, google, lat, lng, radiusKm, type) {
   return new Promise((resolve, reject) => {
     service.nearbySearch(
       {
-        location: new google.maps.LatLng(lat, lng),
+        location: { lat, lng },
         radius: radiusKm * 1000,
         type,
       },

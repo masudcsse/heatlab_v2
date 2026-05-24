@@ -5,7 +5,7 @@ function SelectedPlaceWeatherCard({ item }) {
     <section className="section">
       <div className="section-heading">
         <h2>Selected Place Weather</h2>
-        <span>Netatmo weather data or mock fallback</span>
+        <span>{item.weather?.source || "No weather source"}</span>
       </div>
 
       <div className="result-card">

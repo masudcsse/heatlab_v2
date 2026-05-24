@@ -13,8 +13,11 @@ export async function getNetatmoWeather(lat, lng) {
       if (response.ok) {
         return await response.json();
       }
+
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || "Netatmo weather request failed.");
     } catch (error) {
-      console.warn("Backend/Netatmo unavailable. Using mock weather.", error);
+      throw new Error(error.message || "Backend/Netatmo unavailable.");
     }
   }
 
