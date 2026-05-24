@@ -21,9 +21,10 @@ function buildSetupChecklist(errorText) {
 
   if (errorText?.includes("Missing VITE_GOOGLE_PLACES_API_KEY")) {
     return [
-      "Create/update .env with VITE_GOOGLE_PLACES_API_KEY=your_google_api_key.",
-      "Stop and restart the Vite dev server.",
-      "Hard refresh the browser.",
+      "For local development, add VITE_GOOGLE_PLACES_API_KEY=your_google_api_key to .env and restart npm run dev.",
+      "For Netlify, add VITE_GOOGLE_PLACES_API_KEY in Site configuration > Environment variables.",
+      "Redeploy the Netlify site after adding the variable because Vite reads it at build time.",
+      "In Google Cloud, add this Netlify domain to the key's Website restrictions.",
     ];
   }
 

@@ -17,11 +17,19 @@ export async function getNetatmoWeather(lat, lng) {
       const payload = await response.json().catch(() => ({}));
       throw new Error(payload.error || "Netatmo weather request failed.");
     } catch (error) {
-      throw new Error(error.message || "Backend/Netatmo unavailable.");
+      throw new Error(formatNetatmoError(error, apiBaseUrl));
     }
   }
 
   return getMockNetatmoWeather(lat, lng);
+}
+
+function formatNetatmoError(error, apiBaseUrl) {
+  if (error instanceof TypeError && error.message === "Failed to fetch") {
+    return `Netatmo backend is not reachable at ${apiBaseUrl}. Start it with "npm run api" and keep it running while using the app.`;
+  }
+
+  return error.message || "Backend/Netatmo unavailable.";
 }
 
 function getMockNetatmoWeather(lat, lng) {

@@ -1,7 +1,6 @@
 import {
   getBambergLocationRestriction,
   importPlacesLibrary,
-  loadGooglePlacesScript,
   normalizePlace,
 } from "./googlePlaces";
 
@@ -72,52 +71,31 @@ export async function getPlaceDetails(placeId) {
 }
 
 export async function getNearbyPlaces(lat, lng, radiusKm, placeType) {
-  const google = await loadGooglePlacesScript();
-  const dummyDiv = document.createElement("div");
-  const service = new google.maps.places.PlacesService(dummyDiv);
-
+  const { Place, SearchNearbyRankPreference } = await importPlacesLibrary();
   const googleTypes = getGoogleTypesFromPlaceType(placeType);
-  const allResults = [];
-
-  for (const type of googleTypes) {
-    const results = await nearbySearchByType(service, google, lat, lng, radiusKm, type);
-    allResults.push(...results);
-  }
-
-  const uniquePlaces = removeDuplicatePlaces(allResults);
-
-  return uniquePlaces.map((place) => ({
-    id: place.place_id,
-    googlePlaceId: place.place_id,
-    name: place.name,
-    address: place.vicinity || "Address not available",
-    lat: place.geometry.location.lat(),
-    lng: place.geometry.location.lng(),
-    types: place.types || [],
-    category: detectPlaceCategory(place.types || []),
-    source: "google_places",
-  }));
-}
-
-function nearbySearchByType(service, google, lat, lng, radiusKm, type) {
-  return new Promise((resolve, reject) => {
-    service.nearbySearch(
-      {
-        location: { lat, lng },
-        radius: radiusKm * 1000,
-        type,
-      },
-      (results, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK) {
-          resolve(results || []);
-        } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-          resolve([]);
-        } else {
-          reject(new Error(`Nearby search failed for ${type}: ${status}`));
-        }
-      }
-    );
+  const { places } = await Place.searchNearby({
+    fields: ["id", "displayName", "formattedAddress", "location", "types"],
+    includedPrimaryTypes: googleTypes,
+    locationRestriction: {
+      center: { lat, lng },
+      radius: radiusKm * 1000,
+    },
+    maxResultCount: 15,
+    rankPreference: SearchNearbyRankPreference.POPULARITY,
+    region: "de",
   });
+
+  return (places || [])
+    .map((place) => {
+      const normalizedPlace = normalizePlace(place);
+      if (!normalizedPlace) return null;
+
+      return {
+        ...normalizedPlace,
+        category: detectPlaceCategory(normalizedPlace.types || []),
+      };
+    })
+    .filter(Boolean);
 }
 
 function getGoogleTypesFromPlaceType(placeType) {

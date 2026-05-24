@@ -1,11 +1,11 @@
-import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const DEFAULT_PORT = 5000;
 const DEFAULT_RADIUS_KM = 10;
 const TOKEN_URL = "https://api.netatmo.com/oauth2/token";
-const PUBLIC_DATA_URL = "https://api.netatmo.net/api/getpublicdata";
+const DEFAULT_PUBLIC_DATA_URL = "https://api.netatmo.com/api/getpublicdata";
+const NETATMO_FETCH_TIMEOUT_MS = 12_000;
 
 loadDotEnv();
 
@@ -13,7 +13,7 @@ let cachedAccessToken = process.env.NETATMO_ACCESS_TOKEN || "";
 let cachedRefreshToken = process.env.NETATMO_REFRESH_TOKEN || "";
 let accessTokenExpiresAt = cachedAccessToken ? Date.now() + 45 * 60 * 1000 : 0;
 
-const server = createServer(async (request, response) => {
+export async function handleNetatmoRequest(request, response) {
   setCorsHeaders(response);
 
   if (request.method === "OPTIONS") {
@@ -50,12 +50,11 @@ const server = createServer(async (request, response) => {
       error: error.message || "Netatmo request failed.",
     });
   }
-});
+}
 
-server.listen(Number(process.env.PORT || DEFAULT_PORT), () => {
-  const port = Number(process.env.PORT || DEFAULT_PORT);
-  console.log(`HeatLab Netatmo API running at http://localhost:${port}`);
-});
+export function getServerPort() {
+  return Number(process.env.PORT || DEFAULT_PORT);
+}
 
 function loadDotEnv() {
   try {
@@ -92,11 +91,11 @@ function sendJson(response, statusCode, payload) {
   response.end(JSON.stringify(payload));
 }
 
-async function getNetatmoPublicWeather(lat, lng) {
+export async function getNetatmoPublicWeather(lat, lng) {
   const accessToken = await getAccessToken();
   const radiusKm = Number(process.env.NETATMO_SEARCH_RADIUS_KM || DEFAULT_RADIUS_KM);
   const bounds = getBounds(lat, lng, radiusKm);
-  const url = new URL(PUBLIC_DATA_URL);
+  const url = new URL(process.env.NETATMO_PUBLIC_DATA_URL || DEFAULT_PUBLIC_DATA_URL);
 
   url.searchParams.set("lat_ne", String(bounds.latNe));
   url.searchParams.set("lon_ne", String(bounds.lonNe));
@@ -105,7 +104,7 @@ async function getNetatmoPublicWeather(lat, lng) {
   url.searchParams.set("required_data", "temperature");
   url.searchParams.set("filter", "true");
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -138,7 +137,7 @@ async function getNetatmoPublicWeather(lat, lng) {
   return nearest;
 }
 
-async function getAccessToken() {
+export async function getAccessToken() {
   if (cachedAccessToken && Date.now() < accessTokenExpiresAt - 60_000) {
     return cachedAccessToken;
   }
@@ -160,7 +159,7 @@ async function getAccessToken() {
     client_secret: clientSecret,
   });
 
-  const response = await fetch(TOKEN_URL, {
+  const response = await fetchWithTimeout(TOKEN_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -320,6 +319,20 @@ function createHttpError(message, statusCode) {
   const error = new Error(message);
   error.statusCode = statusCode;
   return error;
+}
+
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), NETATMO_FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function formatFetchError(error) {

@@ -45,3 +45,15 @@ npm run dev
 ```
 
 When `VITE_API_BASE_URL` is set, HeatLab requests live public Netatmo weather from `GET /api/netatmo/weather?lat=...&lng=...`. Without `VITE_API_BASE_URL`, the frontend uses mock weather for UI development.
+
+Check whether the Netatmo credentials can refresh an access token:
+
+```bash
+npm run test:netatmo
+```
+
+Check credentials plus a public weather lookup near Bamberg:
+
+```bash
+npm run test:netatmo:weather
+```

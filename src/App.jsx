@@ -39,6 +39,7 @@ function App() {
       setLoading(true);
       setError("");
       setRecommendation(null);
+      setSelectedPlaceWeather(null);
       setNearbyPlacesWithWeather([]);
 
       // 1. Fetch weather for the selected place.
@@ -65,12 +66,24 @@ function App() {
       setSelectedPlaceWeather(selectedItem);
 
       // 2. Discover nearby places within 2 KM using Google Places API.
-      const nearbyPlaces = await getNearbyPlaces(
-        selectedPlace.lat,
-        selectedPlace.lng,
-        2,
-        placeType
-      );
+      let nearbyPlaces = [];
+
+      try {
+        nearbyPlaces = await getNearbyPlaces(
+          selectedPlace.lat,
+          selectedPlace.lng,
+          2,
+          placeType
+        );
+      } catch (err) {
+        setRecommendation(selectedItem);
+        setError(
+          `Selected place weather loaded from Netatmo, but nearby Google Places comparison failed: ${
+            err.message || "Unknown nearby places error."
+          }`
+        );
+        return;
+      }
 
       // 3. Fetch weather for each nearby place and calculate comfort scores.
       const nearbyWithWeather = await Promise.all(
