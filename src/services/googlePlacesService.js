@@ -124,7 +124,7 @@ function getGoogleTypesFromPlaceType(placeType) {
   return typeMap[placeType] || typeMap.All;
 }
 
-function detectPlaceCategory(types) {
+export function detectPlaceCategory(types) {
   const indoorTypes = [
     "museum",
     "cafe",

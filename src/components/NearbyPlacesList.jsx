@@ -1,3 +1,5 @@
+import ComfortFeatureSummary from "./ComfortFeatureSummary";
+
 function NearbyPlacesList({ places }) {
   return (
     <section className="section">
@@ -46,6 +48,8 @@ function NearbyPlacesList({ places }) {
               ) : (
                 <p>No weather data available.</p>
               )}
+
+              <ComfortFeatureSummary item={item} />
 
               <p className="reason-text">{item.suitabilityReason}</p>
             </div>

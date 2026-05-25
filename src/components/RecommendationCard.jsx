@@ -1,3 +1,5 @@
+import ComfortFeatureSummary from "./ComfortFeatureSummary";
+
 function RecommendationCard({ recommendation }) {
   if (!recommendation) return null;
 
@@ -17,6 +19,8 @@ function RecommendationCard({ recommendation }) {
               Score: {recommendation.comfortScore}/100
             </span>
           </div>
+
+          <ComfortFeatureSummary item={recommendation} />
 
           <p>{recommendation.suitabilityReason}</p>
         </div>

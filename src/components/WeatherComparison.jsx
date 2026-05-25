@@ -1,3 +1,5 @@
+import { createComfortFeatureMessages } from "../services/comfortFeaturesService";
+
 function WeatherComparison({ places }) {
   return (
     <section className="section">
@@ -18,6 +20,7 @@ function WeatherComparison({ places }) {
               <th>Pressure</th>
               <th>Rain</th>
               <th>Station Distance</th>
+              <th>Comfort Support</th>
               <th>Comfort</th>
             </tr>
           </thead>
@@ -35,6 +38,7 @@ function WeatherComparison({ places }) {
                 <td>
                   {item.weather ? `${item.weather.stationDistanceKm} km` : "N/A"}
                 </td>
+                <td>{formatSupportSummary(item)}</td>
                 <td>
                   <strong>{item.comfortScore ?? "N/A"}</strong>
                 </td>
@@ -45,6 +49,18 @@ function WeatherComparison({ places }) {
       </div>
     </section>
   );
+}
+
+function formatSupportSummary(item) {
+  if (item.comfortFeatureLookupError) {
+    return "Feature lookup unavailable";
+  }
+
+  const messages = createComfortFeatureMessages(item.comfortFeatures);
+
+  if (messages.length === 0) return "N/A";
+
+  return messages.join(" | ");
 }
 
 export default WeatherComparison;

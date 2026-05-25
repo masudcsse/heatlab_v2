@@ -1,3 +1,5 @@
+import ComfortFeatureSummary from "./ComfortFeatureSummary";
+
 function SelectedPlaceWeatherCard({ item }) {
   if (!item) return null;
 
@@ -42,6 +44,8 @@ function SelectedPlaceWeatherCard({ item }) {
         ) : (
           <p>No Netatmo weather data available.</p>
         )}
+
+        <ComfortFeatureSummary item={item} />
 
         <p className="reason-text">{item.suitabilityReason}</p>
       </div>
