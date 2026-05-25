@@ -138,6 +138,12 @@ function App() {
         featureLookup.features,
         indoorCandidates
       );
+      const selectedMapFeatures = buildComfortMapFeatures(
+        selectedPlaceForScoring,
+        featureLookup.features,
+        indoorCandidates,
+        comfortNeeds
+      );
       const selectedScoreResult = calculateComfortScore(
         selectedPlaceForScoring,
         selectedWeather,
@@ -157,6 +163,7 @@ function App() {
         weather: selectedWeather,
         comfortNeeds,
         comfortFeatures: selectedComfortFeatures,
+        comfortFeatureCandidates: selectedMapFeatures,
         comfortFeatureLookupError: featureLookup.error,
         comfortScore: selectedScoreResult.score,
         suitabilityReason: selectedScoreResult.reason,
@@ -328,6 +335,42 @@ function getNoPreferenceMatchMessage(activityPreference) {
   }
 
   return "No nearby recommendation matched the selected activity preference.";
+}
+
+function buildComfortMapFeatures(
+  selectedPlace,
+  osmFeatures = [],
+  indoorCandidates = [],
+  comfortNeeds = {}
+) {
+  const features = [...(osmFeatures || [])];
+
+  if (comfortNeeds.indoor) {
+    const indoorFeatures = (indoorCandidates || [])
+      .filter((candidate) => candidate.googlePlaceId !== selectedPlace.googlePlaceId)
+      .filter((candidate) => Number.isFinite(candidate.lat) && Number.isFinite(candidate.lng))
+      .map((candidate) => ({
+        id: candidate.googlePlaceId,
+        name: candidate.name,
+        type: "indoor_place",
+        category: "indoor",
+        lat: candidate.lat,
+        lng: candidate.lng,
+        distanceKm: Number(
+          calculateDistanceKm(
+            selectedPlace.lat,
+            selectedPlace.lng,
+            candidate.lat,
+            candidate.lng
+          ).toFixed(2)
+        ),
+        source: candidate.source || "google_places",
+      }));
+
+    features.push(...indoorFeatures);
+  }
+
+  return features;
 }
 
 export default App;

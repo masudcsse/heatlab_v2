@@ -45,7 +45,7 @@ function SelectedPlaceWeatherCard({ item }) {
           <p>No Netatmo weather data available.</p>
         )}
 
-        <ComfortFeatureSummary item={item} />
+        <ComfortFeatureSummary item={item} showMap />
 
         <p className="reason-text">{item.suitabilityReason}</p>
       </div>

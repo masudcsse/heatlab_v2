@@ -479,6 +479,131 @@ body {
   margin: 4px 0;
 }
 
+.comfort-map-panel {
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #c7d2fe;
+  border-radius: 16px;
+  background: white;
+}
+
+.comfort-map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  background:
+    radial-gradient(circle at 5% 0%, rgba(34, 197, 94, 0.13), transparent 38%),
+    linear-gradient(90deg, #f8fafc, #eef2ff);
+  border-bottom: 1px solid #dbeafe;
+}
+
+.comfort-map-header span {
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.comfort-map-header small {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.comfort-support-map {
+  width: 100%;
+  height: 280px;
+  z-index: 0;
+}
+
+.comfort-map-marker {
+  background: transparent;
+  border: none;
+}
+
+.comfort-map-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 3px solid white;
+  border-radius: 999px;
+  color: white;
+  font-size: 0.76rem;
+  font-weight: 900;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.28);
+}
+
+.comfort-map-pin-selected {
+  background: #0f172a;
+}
+
+.comfort-map-pin-water {
+  background: #0284c7;
+}
+
+.comfort-map-pin-shade {
+  background: #16a34a;
+}
+
+.comfort-map-pin-indoor {
+  background: #9333ea;
+}
+
+.comfort-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 11px 13px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.comfort-map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.comfort-map-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.comfort-map-dot-selected {
+  background: #0f172a;
+}
+
+.comfort-map-dot-water {
+  background: #0284c7;
+}
+
+.comfort-map-dot-shade {
+  background: #16a34a;
+}
+
+.comfort-map-dot-indoor {
+  background: #9333ea;
+}
+
+.comfort-feature-box .leaflet-popup-content {
+  color: #334155;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.comfort-feature-box .leaflet-popup-content strong {
+  display: inline;
+  margin: 0;
+  color: #0f172a;
+}
+
 .table-wrapper {
   padding: 0;
   overflow-x: auto;
@@ -545,5 +670,14 @@ th {
 
   .history-chart {
     height: 320px;
+  }
+
+  .comfort-map-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .comfort-support-map {
+    height: 240px;
   }
 }
