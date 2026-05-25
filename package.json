@@ -8,14 +8,17 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "inspect:db": "node server/inspectPostgresSchema.js",
     "test:netatmo": "node server/testNetatmoCredentials.js",
     "test:netatmo:weather": "node server/testNetatmoCredentials.js --weather"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "chart.js": "^4.5.1",
+    "pg": "^8.21.0",
     "react": "latest",
-    "react-dom": "latest"
-  },
-  "devDependencies": {}
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "latest",
+    "vite": "latest"
+  }
 }

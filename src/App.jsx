@@ -9,6 +9,7 @@ import SelectedPlaceWeatherCard from "./components/SelectedPlaceWeatherCard";
 import NearbyPlacesList from "./components/NearbyPlacesList";
 import WeatherComparison from "./components/WeatherComparison";
 import RecommendationCard from "./components/RecommendationCard";
+import HistoricalWeatherComparison from "./components/HistoricalWeatherComparison";
 
 import { getNearbyPlaces } from "./services/googlePlacesService";
 import { getNetatmoWeather } from "./services/netatmoService";
@@ -174,6 +175,11 @@ function App() {
         {loading && <LoadingState />}
 
         {error && <ErrorState message={error} />}
+
+        <HistoricalWeatherComparison
+          selectedPlace={selectedPlace}
+          currentWeather={selectedPlaceWeather?.weather || null}
+        />
 
         {!loading && selectedPlaceWeather && (
           <SelectedPlaceWeatherCard item={selectedPlaceWeather} />

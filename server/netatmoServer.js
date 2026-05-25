@@ -1,5 +1,8 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { loadDotEnv } from "./env.js";
+import {
+  getHistoricalWeatherComparison,
+  getHistoricalWeatherOptions,
+} from "./historicalWeather.js";
 
 const DEFAULT_PORT = 5000;
 const DEFAULT_RADIUS_KM = 10;
@@ -26,7 +29,19 @@ export async function handleNetatmoRequest(request, response) {
 
   try {
     if (requestUrl.pathname === "/api/health") {
-      sendJson(response, 200, { ok: true, service: "heatlab-netatmo" });
+      sendJson(response, 200, { ok: true, service: "heatlab-api" });
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/historical-weather/options") {
+      const options = await getHistoricalWeatherOptions();
+      sendJson(response, 200, options);
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/historical-weather/compare") {
+      const comparison = await getHistoricalWeatherComparison(requestUrl.searchParams);
+      sendJson(response, 200, comparison);
       return;
     }
 
@@ -54,30 +69,6 @@ export async function handleNetatmoRequest(request, response) {
 
 export function getServerPort() {
   return Number(process.env.PORT || DEFAULT_PORT);
-}
-
-function loadDotEnv() {
-  try {
-    const envPath = resolve(process.cwd(), ".env");
-    const contents = readFileSync(envPath, "utf8");
-
-    contents.split(/\r?\n/).forEach((line) => {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) return;
-
-      const equalsIndex = trimmed.indexOf("=");
-      if (equalsIndex === -1) return;
-
-      const key = trimmed.slice(0, equalsIndex).trim();
-      const value = trimmed.slice(equalsIndex + 1).trim().replace(/^["']|["']$/g, "");
-
-      if (key && process.env[key] === undefined) {
-        process.env[key] = value;
-      }
-    });
-  } catch {
-    // .env is optional; CI or hosted environments can provide real env vars.
-  }
 }
 
 function setCorsHeaders(response) {
