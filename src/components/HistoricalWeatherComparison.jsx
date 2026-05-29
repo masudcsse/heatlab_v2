@@ -53,10 +53,12 @@ function HistoricalWeatherComparison({ selectedPlace, currentWeather }) {
         setError("");
         setLiveWeatherError("");
 
+        const comparisonBaseTime = new Date().toISOString();
         const comparisonRequest = getHistoricalWeatherComparison({
           metric: DEFAULT_METRIC,
           rangeDays: DEFAULT_RANGE_DAYS,
           resolution: "raw",
+          baseTime: comparisonBaseTime,
           lat: selectedPlace.lat,
           lng: selectedPlace.lng,
         });
@@ -301,8 +303,8 @@ function HistoricalWeatherComparison({ selectedPlace, currentWeather }) {
 
             <div className="history-meta">
               <span>
-                Temperature comparison for the latest 7-day database period,
-                aligned by day and hour.
+                Temperature comparison for the last 7 days up to the current
+                time, aligned by day and hour.
               </span>
               <span>Missing measurements are skipped.</span>
               <span>Live current weather comes from Netatmo.</span>

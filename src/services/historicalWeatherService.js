@@ -6,6 +6,7 @@ export async function getHistoricalWeatherComparison({
   metric,
   station,
   date,
+  baseTime,
   rangeDays,
   resolution = "hourly",
   lat,
@@ -19,6 +20,10 @@ export async function getHistoricalWeatherComparison({
 
   if (date) {
     params.set("date", date);
+  }
+
+  if (baseTime) {
+    params.set("baseTime", baseTime);
   }
 
   if (station && station !== "all") {

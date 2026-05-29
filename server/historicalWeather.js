@@ -86,14 +86,18 @@ export async function getHistoricalWeatherComparison(searchParams) {
   const station = requestedStation || stationDetails?.id || null;
   const rangeDays = normalizeRangeDays(searchParams.get("rangeDays"));
   const resolution = normalizeResolution(searchParams.get("resolution"), rangeDays);
-  const baseDate = normalizeDate(
+  const baseTime = normalizeBaseTime(
+    searchParams.get("baseTime"),
     searchParams.get("date"),
-    options.dateRange.max ? new Date(options.dateRange.max) : new Date()
+    new Date()
   );
 
-  const basePeriod = buildPeriod(baseDate, rangeDays);
+  const basePeriod = buildPeriod(baseTime, rangeDays);
   const labelsByKey = new Map();
   const series = [];
+
+  addAlignedLabel(labelsByKey, basePeriod.start, rangeDays);
+  addAlignedLabel(labelsByKey, basePeriod.endExclusive, rangeDays);
 
   for (const yearOffset of [0, 1, 2, 3]) {
     const periodStart = shiftDateByYears(basePeriod.start, yearOffset);
@@ -126,12 +130,7 @@ export async function getHistoricalWeatherComparison(searchParams) {
       );
       const alignedKey = alignedAt.toISOString();
 
-      if (!labelsByKey.has(alignedKey)) {
-        labelsByKey.set(alignedKey, {
-          key: alignedKey,
-          label: formatAlignedLabel(alignedAt, rangeDays),
-        });
-      }
+      addAlignedLabel(labelsByKey, alignedAt, rangeDays);
 
       return {
         alignedAt: alignedKey,
@@ -165,7 +164,8 @@ export async function getHistoricalWeatherComparison(searchParams) {
     stationDetails,
     rangeDays,
     resolution,
-    baseDate: baseDate.toISOString().slice(0, 10),
+    baseDate: baseTime.toISOString().slice(0, 10),
+    baseTime: baseTime.toISOString(),
     basePeriod: {
       start: basePeriod.start.toISOString(),
       end: basePeriod.endExclusive.toISOString(),
@@ -323,25 +323,37 @@ function normalizeResolution(value, rangeDays) {
   return "hourly";
 }
 
-function normalizeDate(value, fallbackDate) {
-  const dateValue = value || fallbackDate.toISOString().slice(0, 10);
+function normalizeBaseTime(baseTimeValue, dateValue, fallbackDate) {
+  if (baseTimeValue) {
+    const date = new Date(baseTimeValue);
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-    throw createDbError("date must use YYYY-MM-DD format.", 400);
+    if (Number.isNaN(date.getTime())) {
+      throw createDbError("baseTime must be a valid ISO date-time.", 400);
+    }
+
+    return date;
   }
 
-  const date = new Date(`${dateValue}T00:00:00.000Z`);
+  if (dateValue) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      throw createDbError("date must use YYYY-MM-DD format.", 400);
+    }
 
-  if (Number.isNaN(date.getTime())) {
-    throw createDbError("date must be a valid calendar date.", 400);
+    const date = new Date(`${dateValue}T00:00:00.000Z`);
+
+    if (Number.isNaN(date.getTime())) {
+      throw createDbError("date must be a valid calendar date.", 400);
+    }
+
+    // Preserve the older date-only behavior by ending the range after the
+    // selected day. New callers should pass baseTime for an exact "now" range.
+    return addDays(date, 1);
   }
 
-  return date;
+  return fallbackDate;
 }
 
-function buildPeriod(endDateInclusive, rangeDays) {
-  const endExclusive = addDays(endDateInclusive, 1);
-
+function buildPeriod(endExclusive, rangeDays) {
   return {
     start: addDays(endExclusive, -rangeDays),
     endExclusive,
@@ -360,6 +372,17 @@ function addDays(date, days) {
   return next;
 }
 
+function addAlignedLabel(labelsByKey, date, rangeDays) {
+  const key = date.toISOString();
+
+  if (!labelsByKey.has(key)) {
+    labelsByKey.set(key, {
+      key,
+      label: formatAlignedLabel(date, rangeDays),
+    });
+  }
+}
+
 function getSeriesLabel(yearOffset, year) {
   if (yearOffset === 0) return `${year} current year`;
   if (yearOffset === 1) return `${year} previous year`;
@@ -369,16 +392,30 @@ function getSeriesLabel(yearOffset, year) {
 function formatAlignedLabel(date, rangeDays) {
   const month = date.toLocaleString("en-US", {
     month: "short",
-    timeZone: "UTC",
+    timeZone: "Europe/Berlin",
   });
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hour = String(date.getUTCHours()).padStart(2, "0");
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Berlin",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    hourCycle: "h23",
+  })
+    .formatToParts(date)
+    .reduce((acc, part) => {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+  const day = parts.day;
+  const hour = parts.hour;
+  const minute = parts.minute;
 
   if (rangeDays > 14) {
     return `${month} ${day}`;
   }
 
-  return `${month} ${day}, ${hour}:00`;
+  return `${month} ${day}, ${hour}:${minute}`;
 }
 
 function roundMetric(value) {
