@@ -59,6 +59,29 @@ export async function handleNetatmoRequest(request, response) {
       return;
     }
 
+    if (requestUrl.pathname === "/api/netatmo/stations") {
+      const lat = Number(requestUrl.searchParams.get("lat"));
+      const lng = Number(requestUrl.searchParams.get("lng"));
+      const radiusKm = normalizeRadiusKm(
+        requestUrl.searchParams.get("radiusKm") || DEFAULT_RADIUS_KM
+      );
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        sendJson(response, 400, { error: "lat and lng query params are required." });
+        return;
+      }
+
+      const stations = await getNetatmoPublicStations(lat, lng, radiusKm);
+      sendJson(response, 200, {
+        center: { lat, lng },
+        radiusKm,
+        count: stations.length,
+        stationIds: stations.map((station) => station.stationId),
+        stations,
+      });
+      return;
+    }
+
     sendJson(response, 404, { error: "Route not found." });
   } catch (error) {
     sendJson(response, error.statusCode || 500, {
@@ -83,8 +106,33 @@ function sendJson(response, statusCode, payload) {
 }
 
 export async function getNetatmoPublicWeather(lat, lng) {
+  const radiusKm = normalizeRadiusKm(
+    process.env.NETATMO_SEARCH_RADIUS_KM || DEFAULT_RADIUS_KM
+  );
+  const nearest = (await getNetatmoPublicStations(lat, lng, radiusKm))
+    .filter((station) => station && Number.isFinite(station.temperature))
+    .sort((a, b) => a.stationDistanceKm - b.stationDistanceKm)[0];
+
+  if (!nearest) {
+    throw createHttpError("No public Netatmo temperature station found near this place.", 404);
+  }
+
+  return nearest;
+}
+
+export async function getNetatmoPublicStations(lat, lng, radiusKm = DEFAULT_RADIUS_KM) {
+  const searchRadiusKm = normalizeRadiusKm(radiusKm);
+  const stations = await fetchNetatmoPublicStationPayload(lat, lng, searchRadiusKm);
+
+  return stations
+    .map((station) => normalizeStation(station, lat, lng))
+    .filter(Boolean)
+    .filter((station) => station.stationDistanceKm <= searchRadiusKm)
+    .sort((a, b) => a.stationDistanceKm - b.stationDistanceKm);
+}
+
+async function fetchNetatmoPublicStationPayload(lat, lng, radiusKm) {
   const accessToken = await getAccessToken();
-  const radiusKm = Number(process.env.NETATMO_SEARCH_RADIUS_KM || DEFAULT_RADIUS_KM);
   const bounds = getBounds(lat, lng, radiusKm);
   const url = new URL(process.env.NETATMO_PUBLIC_DATA_URL || DEFAULT_PUBLIC_DATA_URL);
 
@@ -115,17 +163,7 @@ export async function getNetatmoPublicWeather(lat, lng) {
     );
   }
 
-  const stations = Array.isArray(payload.body) ? payload.body : [];
-  const nearest = stations
-    .map((station) => normalizeStation(station, lat, lng))
-    .filter((station) => station && Number.isFinite(station.temperature))
-    .sort((a, b) => a.stationDistanceKm - b.stationDistanceKm)[0];
-
-  if (!nearest) {
-    throw createHttpError("No public Netatmo temperature station found near this place.", 404);
-  }
-
-  return nearest;
+  return Array.isArray(payload.body) ? payload.body : [];
 }
 
 export async function getAccessToken() {
@@ -283,6 +321,16 @@ function getBounds(lat, lng, radiusKm) {
     latSw: clamp(lat - latDelta, -85, 85),
     lonSw: clamp(lng - lngDelta, -180, 180),
   };
+}
+
+function normalizeRadiusKm(value) {
+  const radiusKm = Number(value);
+
+  if (!Number.isFinite(radiusKm) || radiusKm <= 0 || radiusKm > 50) {
+    throw createHttpError("radiusKm must be a number greater than 0 and at most 50.", 400);
+  }
+
+  return radiusKm;
 }
 
 function distanceKm(lat1, lng1, lat2, lng2) {
