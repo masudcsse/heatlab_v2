@@ -259,10 +259,10 @@ function App() {
 
         <div className="hero-content">
           <div className="hero-text">
-            <h1>Find the most comfortable place to visit in Bamberg.</h1>
+            <h1>Plan your visit in Bamberg with weather-based recommendations for comfortable places and activities.</h1>
+            <br/><br/>
             <p>
-              Search a real place in Bamberg, compare nearby weather conditions,
-              and get a simple comfort-based recommendation.
+              Search a real location, compare nearby weather conditions, and discover suitable places based on comfort, shade, drinking water, indoor options, and your activity preferences.
             </p>
           </div>
 

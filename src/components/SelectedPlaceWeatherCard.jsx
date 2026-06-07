@@ -1,7 +1,10 @@
 import ComfortFeatureSummary from "./ComfortFeatureSummary";
+import { getComfortRecommendation } from "../utils/comfortScore";
 
 function SelectedPlaceWeatherCard({ item }) {
   if (!item) return null;
+
+  const recommendation = getComfortRecommendation(item.comfortScore);
 
   return (
     <section className="section">
@@ -32,9 +35,10 @@ function SelectedPlaceWeatherCard({ item }) {
               <span>Rain</span>
               <strong>{item.weather.rain ? "Yes" : "No"}</strong>
             </div>
-            <div>
-              <span>Comfort</span>
-              <strong>{item.comfortScore}/100</strong>
+            <div className={`recommendation-metric recommendation-${recommendation.tone}`}>
+              <span>Recommendation</span>
+              <strong>{recommendation.label}</strong>
+              <small>{recommendation.summary}</small>
             </div>
           </div>
         ) : (

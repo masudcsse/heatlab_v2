@@ -1,4 +1,5 @@
 import ComfortFeatureSummary from "./ComfortFeatureSummary";
+import { getComfortRecommendation } from "../utils/comfortScore";
 
 function NearbyPlacesList({ places }) {
   return (
@@ -14,42 +15,46 @@ function NearbyPlacesList({ places }) {
         </div>
       ) : (
         <div className="places-grid">
-          {places.map((item) => (
-            <div className="place-card" key={item.place.googlePlaceId}>
-              <h3>{item.place.name}</h3>
-              <p>{item.place.address}</p>
+          {places.map((item) => {
+            const recommendation = getComfortRecommendation(item.comfortScore);
 
-              <div className="badge-row">
-                <span className="badge badge-blue">{item.place.category}</span>
-                <span className="badge badge-green">
-                  {item.comfortScore ?? "N/A"} / 100
-                </span>
-              </div>
+            return (
+              <div className="place-card" key={item.place.googlePlaceId}>
+                <h3>{item.place.name}</h3>
+                <p>{item.place.address}</p>
 
-              {item.weather ? (
-                <div className="metrics-grid">
-                  <div>
-                    <span>Temp</span>
-                    <strong>{item.weather.temperature}°C</strong>
-                  </div>
-                  <div>
-                    <span>Humidity</span>
-                    <strong>{item.weather.humidity}%</strong>
-                  </div>
-                  <div>
-                    <span>Rain</span>
-                    <strong>{item.weather.rain ? "Yes" : "No"}</strong>
-                  </div>
+                <div className="badge-row">
+                  <span className="badge badge-blue">{item.place.category}</span>
+                  <span className={`badge badge-${recommendation.tone}`}>
+                    {recommendation.label}
+                  </span>
                 </div>
-              ) : (
-                <p>No weather data available.</p>
-              )}
 
-              <ComfortFeatureSummary item={item} />
+                {item.weather ? (
+                  <div className="metrics-grid">
+                    <div>
+                      <span>Temp</span>
+                    <strong>{item.weather.temperature}°C</strong>
+                    </div>
+                    <div>
+                      <span>Humidity</span>
+                      <strong>{item.weather.humidity}%</strong>
+                    </div>
+                    <div>
+                      <span>Rain</span>
+                      <strong>{item.weather.rain ? "Yes" : "No"}</strong>
+                    </div>
+                  </div>
+                ) : (
+                  <p>No weather data available.</p>
+                )}
 
-              <p className="reason-text">{item.suitabilityReason}</p>
-            </div>
-          ))}
+                <ComfortFeatureSummary item={item} />
+
+                <p className="reason-text">{item.suitabilityReason}</p>
+              </div>
+            );
+          })}
         </div>
       )}
     </section>

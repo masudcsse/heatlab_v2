@@ -41,7 +41,7 @@ body {
   font-weight: 600;
 }
 
-.hero-content {
+/* .hero-content {
   max-width: 1150px;
   margin: 0 auto;
   display: grid;
@@ -59,7 +59,30 @@ body {
   font-size: clamp(2.5rem, 6vw, 5rem);
   line-height: 1.05;
   margin: 0 0 24px;
-  font-weight: 900;
+  font-weight: 500;
+} */
+
+.hero-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  gap: 60px;
+}
+
+.hero-text {
+  flex: 1.3;
+  text-align: left;
+}
+
+.hero-text h1 {
+  color: #050713;
+  font-size: clamp(1.0rem, 3vw, 2.5rem);
+  line-height: 1.08;
+  margin: 0;
+  font-weight: 200;
+  max-width: 820px;
 }
 
 .hero-text p {
@@ -413,6 +436,42 @@ body {
   color: #1d4ed8;
 }
 
+.badge-excellent {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-good {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.badge-caution {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-poor {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.badge-bad {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-neutral {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.recommendation-summary {
+  color: #475569;
+  line-height: 1.5;
+  margin: -4px 0 12px;
+}
+
 .places-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -444,6 +503,49 @@ body {
 
 .metrics-grid strong {
   color: #111827;
+}
+
+.metrics-grid .recommendation-metric {
+  border: 1px solid #bae6fd;
+  grid-column: span 2;
+}
+
+.metrics-grid .recommendation-excellent {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.metrics-grid .recommendation-good {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+}
+
+.metrics-grid .recommendation-caution {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.metrics-grid .recommendation-poor {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.metrics-grid .recommendation-bad {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.metrics-grid .recommendation-neutral {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.recommendation-metric small {
+  color: #475569;
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  margin-top: 5px;
 }
 
 .reason-text {
@@ -640,6 +742,10 @@ th {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .metrics-grid .recommendation-metric {
+    grid-column: span 2;
+  }
+
   .history-selected-place {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -666,6 +772,10 @@ th {
 
   .history-selected-place {
     grid-template-columns: 1fr;
+  }
+
+  .metrics-grid .recommendation-metric {
+    grid-column: span 1;
   }
 
   .history-chart {

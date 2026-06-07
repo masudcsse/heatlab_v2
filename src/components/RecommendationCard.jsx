@@ -1,7 +1,12 @@
 import ComfortFeatureSummary from "./ComfortFeatureSummary";
+import { getComfortRecommendation } from "../utils/comfortScore";
 
 function RecommendationCard({ recommendation }) {
   if (!recommendation) return null;
+
+  const comfortRecommendation = getComfortRecommendation(
+    recommendation.comfortScore
+  );
 
   return (
     <section className="section">
@@ -15,10 +20,13 @@ function RecommendationCard({ recommendation }) {
             <span className="badge badge-green">
               {recommendation.place.category}
             </span>
-            <span className="badge badge-blue">
-              Score: {recommendation.comfortScore}/100
+            <span className={`badge badge-${comfortRecommendation.tone}`}>
+              {comfortRecommendation.label}
             </span>
           </div>
+          <p className="recommendation-summary">
+            {comfortRecommendation.summary}
+          </p>
 
           <ComfortFeatureSummary item={recommendation} />
 

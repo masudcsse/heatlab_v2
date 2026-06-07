@@ -106,6 +106,62 @@ export function rankPlacesByComfort(placesWithWeather) {
   });
 }
 
+export function getComfortRecommendation(score) {
+  const value = Number(score);
+
+  if (!Number.isFinite(value)) {
+    return {
+      label: "Weather unavailable",
+      tone: "neutral",
+      summary: "No recommendation can be calculated until weather data is available.",
+      reasonLead: "cannot be recommended yet",
+    };
+  }
+
+  if (value >= 85) {
+    return {
+      label: "Highly recommended",
+      tone: "excellent",
+      summary: "A very comfortable match for the selected activity and current weather.",
+      reasonLead: "is highly recommended",
+    };
+  }
+
+  if (value >= 70) {
+    return {
+      label: "Comfortable choice",
+      tone: "good",
+      summary: "A good option with only minor comfort limitations.",
+      reasonLead: "is a comfortable choice",
+    };
+  }
+
+  if (value >= 55) {
+    return {
+      label: "Use with caution",
+      tone: "caution",
+      summary: "Some conditions may reduce comfort, so check the details before going.",
+      reasonLead: "can be used with caution",
+    };
+  }
+
+  if (value >= 40) {
+    return {
+      label: "Low comfort",
+      tone: "poor",
+      summary: "Several conditions make this place less comfortable right now.",
+      reasonLead: "has low comfort right now",
+    };
+  }
+
+  return {
+    label: "Not recommended",
+    tone: "bad",
+    summary: "Current weather or preference conditions do not fit this place well.",
+    reasonLead: "is not recommended right now",
+  };
+}
+
 export function satisfiesRequiredComfortPreference(item) {
   const comfortNeeds = item?.comfortNeeds;
   const features = item?.comfortFeatures;
@@ -535,16 +591,9 @@ function createReason(place, score, reasons) {
   const reasonText =
     reasons.filter(Boolean).slice(0, 6).join(", ") ||
     "available weather and preference data are acceptable";
+  const recommendation = getComfortRecommendation(score);
 
-  if (score >= 85) {
-    return `${place.name} is highly recommended because ${reasonText}.`;
-  }
-
-  if (score >= 65) {
-    return `${place.name} is a suitable option because ${reasonText}.`;
-  }
-
-  return `${place.name} is less suitable right now because ${reasonText}.`;
+  return `${place.name} ${recommendation.reasonLead} because ${reasonText}.`;
 }
 
 function hasAnyType(types, expectedTypes) {

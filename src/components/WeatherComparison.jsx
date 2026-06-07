@@ -1,4 +1,5 @@
 import { createComfortFeatureMessages } from "../services/comfortFeaturesService";
+import { getComfortRecommendation } from "../utils/comfortScore";
 
 function WeatherComparison({ places }) {
   return (
@@ -20,7 +21,7 @@ function WeatherComparison({ places }) {
               <th>Rain</th>
               <th>Station Distance</th>
               <th>Comfort Support</th>
-              <th>Comfort</th>
+              <th>Recommendation</th>
             </tr>
           </thead>
 
@@ -37,15 +38,23 @@ function WeatherComparison({ places }) {
                   {item.weather ? `${item.weather.stationDistanceKm} km` : "N/A"}
                 </td>
                 <td>{formatSupportSummary(item)}</td>
-                <td>
-                  <strong>{item.comfortScore ?? "N/A"}</strong>
-                </td>
+                <td>{formatRecommendation(item)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </section>
+  );
+}
+
+function formatRecommendation(item) {
+  const recommendation = getComfortRecommendation(item.comfortScore);
+
+  return (
+    <span className={`badge badge-${recommendation.tone}`}>
+      {recommendation.label}
+    </span>
   );
 }
 
