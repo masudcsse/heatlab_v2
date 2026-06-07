@@ -17,7 +17,6 @@ export function calculateComfortScore(
 
   const temp = Number(weather.temperature);
   const humidity = Number(weather.humidity);
-  const wind = Number(weather.windSpeed);
   const isRainy = Boolean(weather.rain);
   const isIndoor = place.category === "indoor";
   const isOutdoor = place.category === "outdoor";
@@ -41,13 +40,6 @@ export function calculateComfortScore(
     reasons.push("humidity is comfortable");
   }
 
-  if (wind > 15) {
-    score -= 12;
-    reasons.push("wind speed is high");
-  } else if (wind <= 10) {
-    reasons.push("wind speed is low");
-  }
-
   if (isRainy) {
     if (isOutdoor) {
       score -= 25;
@@ -60,13 +52,12 @@ export function calculateComfortScore(
     }
   }
 
-  if (!isRainy && isOutdoor && temp >= 20 && temp <= 24 && wind <= 10) {
+  if (!isRainy && isOutdoor && temp >= 20 && temp <= 24) {
     score += 8;
     reasons.push("outdoor conditions are pleasant");
   }
 
   if (activityPreference === "Cycling") {
-    if (wind > 12) score -= 15;
     if (isRainy) score -= 20;
   }
 
@@ -75,7 +66,7 @@ export function calculateComfortScore(
   }
 
   if (activityPreference === "Photography") {
-    if (!isRainy && wind <= 12) score += 8;
+    if (!isRainy) score += 8;
     if (isRainy) score -= 15;
   }
 
@@ -89,7 +80,7 @@ export function calculateComfortScore(
   }
 
   if (activityPreference === "Family activity") {
-    if (!isRainy && wind <= 12 && temp >= 18 && temp <= 26) {
+    if (!isRainy && temp >= 18 && temp <= 26) {
       score += 10;
     } else {
       score -= 8;
@@ -321,13 +312,11 @@ function isUncomfortableWeather(weather) {
 
   const temp = Number(weather.temperature);
   const humidity = Number(weather.humidity);
-  const wind = Number(weather.windSpeed);
 
   return (
     Boolean(weather.rain) ||
     (Number.isFinite(temp) && temp >= 26) ||
-    (Number.isFinite(humidity) && humidity >= 70) ||
-    (Number.isFinite(wind) && wind >= 15)
+    (Number.isFinite(humidity) && humidity >= 70)
   );
 }
 

@@ -37,10 +37,6 @@ function NearbyPlacesList({ places }) {
                     <strong>{item.weather.humidity}%</strong>
                   </div>
                   <div>
-                    <span>Wind</span>
-                    <strong>{item.weather.windSpeed} km/h</strong>
-                  </div>
-                  <div>
                     <span>Rain</span>
                     <strong>{item.weather.rain ? "Yes" : "No"}</strong>
                   </div>

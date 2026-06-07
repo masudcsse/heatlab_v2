@@ -16,7 +16,6 @@ function WeatherComparison({ places }) {
               <th>Category</th>
               <th>Temp</th>
               <th>Humidity</th>
-              <th>Wind</th>
               <th>Pressure</th>
               <th>Rain</th>
               <th>Station Distance</th>
@@ -32,7 +31,6 @@ function WeatherComparison({ places }) {
                 <td>{item.place.category}</td>
                 <td>{item.weather ? `${item.weather.temperature}°C` : "N/A"}</td>
                 <td>{item.weather ? `${item.weather.humidity}%` : "N/A"}</td>
-                <td>{item.weather ? `${item.weather.windSpeed} km/h` : "N/A"}</td>
                 <td>{item.weather ? `${item.weather.pressure} hPa` : "N/A"}</td>
                 <td>{item.weather ? (item.weather.rain ? "Yes" : "No") : "N/A"}</td>
                 <td>

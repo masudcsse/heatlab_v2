@@ -25,10 +25,6 @@ function SelectedPlaceWeatherCard({ item }) {
               <strong>{item.weather.humidity}%</strong>
             </div>
             <div>
-              <span>Wind</span>
-              <strong>{item.weather.windSpeed} km/h</strong>
-            </div>
-            <div>
               <span>Pressure</span>
               <strong>{item.weather.pressure} hPa</strong>
             </div>
