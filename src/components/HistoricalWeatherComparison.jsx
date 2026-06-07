@@ -127,24 +127,26 @@ function HistoricalWeatherComparison({ selectedPlace, currentWeather }) {
 
     // The API queries each calendar year separately, then maps each timestamp
     // back onto the selected current-year period so matching dates line up.
-    const datasets = comparison.series.map((series, index) => {
-      const valuesByAlignedTime = new Map(
-        series.points.map((point) => [point.alignedAt, point.value])
-      );
+    const datasets = comparison.series
+      .filter((series) => series.points.length > 0)
+      .map((series) => {
+        const valuesByAlignedTime = new Map(
+          series.points.map((point) => [point.alignedAt, point.value])
+        );
 
-      return {
-        label: series.label,
-        data: labelKeys.map((key) => valuesByAlignedTime.get(key) ?? null),
-        borderColor: SERIES_COLORS[index],
-        backgroundColor: `${SERIES_COLORS[index]}1f`,
-        borderWidth: 3,
-        pointRadius: labelKeys.length > 120 ? 0 : 2,
-        pointHoverRadius: 5,
-        spanGaps: true,
-        tension: 0.32,
-        fill: false,
-      };
-    });
+        return {
+          label: series.label,
+          data: labelKeys.map((key) => valuesByAlignedTime.get(key) ?? null),
+          borderColor: SERIES_COLORS[series.yearOffset] || "#64748b",
+          backgroundColor: `${SERIES_COLORS[series.yearOffset] || "#64748b"}1f`,
+          borderWidth: 3,
+          pointRadius: labelKeys.length > 120 ? 0 : 2,
+          pointHoverRadius: 5,
+          spanGaps: true,
+          tension: 0.32,
+          fill: false,
+        };
+      });
 
     if (liveMetricValue !== null && labelKeys.length > 0) {
       datasets.push({
@@ -234,7 +236,7 @@ function HistoricalWeatherComparison({ selectedPlace, currentWeather }) {
       <div className="section-heading">
         <div>
           <span className="small-label">Historical database</span>
-          <h2>3-Year Weather Comparison</h2>
+          <h2>2-Year Weather Comparison</h2>
         </div>
         <span>From PostgreSQL netatmo_raw_db</span>
       </div>
@@ -291,7 +293,7 @@ function HistoricalWeatherComparison({ selectedPlace, currentWeather }) {
         {!loading && selectedPlace && comparison && !hasChartData && (
           <p className="history-note">
             No historical database records were found for this selected place's
-            nearest station and current 7-day period.
+            nearest station and previous 2-year comparison period.
           </p>
         )}
 
@@ -304,7 +306,7 @@ function HistoricalWeatherComparison({ selectedPlace, currentWeather }) {
             <div className="history-meta">
               <span>
                 Temperature comparison for the last 7 days up to the current
-                time, aligned by day and hour.
+                time against the previous 2 years, aligned by day and hour.
               </span>
               <span>Missing measurements are skipped.</span>
               <span>Live current weather comes from Netatmo.</span>

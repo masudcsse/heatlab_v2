@@ -132,7 +132,6 @@ export async function getNetatmoPublicStations(lat, lng, radiusKm = DEFAULT_RADI
 }
 
 async function fetchNetatmoPublicStationPayload(lat, lng, radiusKm) {
-  const accessToken = await getAccessToken();
   const bounds = getBounds(lat, lng, radiusKm);
   const url = new URL(process.env.NETATMO_PUBLIC_DATA_URL || DEFAULT_PUBLIC_DATA_URL);
 
@@ -143,18 +142,14 @@ async function fetchNetatmoPublicStationPayload(lat, lng, radiusKm) {
   url.searchParams.set("required_data", "temperature");
   url.searchParams.set("filter", "true");
 
-  const response = await fetchWithTimeout(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  }).catch((error) => {
-    throw createHttpError(
-      `Unable to reach Netatmo public data API: ${formatFetchError(error)}`,
-      502
-    );
-  });
+  let accessToken = await getAccessToken();
+  let { response, payload } = await requestNetatmoPublicData(url, accessToken);
 
-  const payload = await readJsonResponse(response);
+  if (isInvalidAccessTokenResponse(response, payload)) {
+    clearCachedAccessToken();
+    accessToken = await getAccessToken({ forceRefresh: true });
+    ({ response, payload } = await requestNetatmoPublicData(url, accessToken));
+  }
 
   if (!response.ok || payload.status === "error") {
     throw createHttpError(
@@ -166,8 +161,28 @@ async function fetchNetatmoPublicStationPayload(lat, lng, radiusKm) {
   return Array.isArray(payload.body) ? payload.body : [];
 }
 
-export async function getAccessToken() {
-  if (cachedAccessToken && Date.now() < accessTokenExpiresAt - 60_000) {
+async function requestNetatmoPublicData(url, accessToken) {
+  const response = await fetchWithTimeout(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  }).catch((error) => {
+    throw createHttpError(
+      `Unable to reach Netatmo public data API: ${formatFetchError(error)}`,
+      502
+    );
+  });
+  const payload = await readJsonResponse(response);
+
+  return { response, payload };
+}
+
+export async function getAccessToken({ forceRefresh = false } = {}) {
+  if (
+    !forceRefresh &&
+    cachedAccessToken &&
+    Date.now() < accessTokenExpiresAt - 60_000
+  ) {
     return cachedAccessToken;
   }
 
@@ -215,6 +230,27 @@ export async function getAccessToken() {
   accessTokenExpiresAt = Date.now() + Number(payload.expires_in || payload.expire_in || 3600) * 1000;
 
   return cachedAccessToken;
+}
+
+function clearCachedAccessToken() {
+  cachedAccessToken = "";
+  accessTokenExpiresAt = 0;
+}
+
+function isInvalidAccessTokenResponse(response, payload) {
+  const message = String(
+    payload?.error?.message ||
+      payload?.error_description ||
+      payload?.error ||
+      ""
+  ).toLowerCase();
+
+  return (
+    response.status === 401 ||
+    (response.status === 403 &&
+      message.includes("invalid") &&
+      message.includes("token"))
+  );
 }
 
 async function readJsonResponse(response) {

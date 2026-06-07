@@ -1,6 +1,7 @@
-﻿import { createDbError, queryDb } from "./db.js";
+import { createDbError, queryDb } from "./db.js";
 
 const MAX_RANGE_DAYS = 45;
+const COMPARISON_YEAR_OFFSETS = [1, 2];
 
 const METRIC_DEFINITIONS = [
   {
@@ -99,7 +100,7 @@ export async function getHistoricalWeatherComparison(searchParams) {
   addAlignedLabel(labelsByKey, basePeriod.start, rangeDays);
   addAlignedLabel(labelsByKey, basePeriod.endExclusive, rangeDays);
 
-  for (const yearOffset of [0, 1, 2, 3]) {
+  for (const yearOffset of COMPARISON_YEAR_OFFSETS) {
     const periodStart = shiftDateByYears(basePeriod.start, yearOffset);
     const periodEnd = shiftDateByYears(basePeriod.endExclusive, yearOffset);
     const targetYear = periodStart.getUTCFullYear();
@@ -384,7 +385,6 @@ function addAlignedLabel(labelsByKey, date, rangeDays) {
 }
 
 function getSeriesLabel(yearOffset, year) {
-  if (yearOffset === 0) return `${year} current year`;
   if (yearOffset === 1) return `${year} previous year`;
   return `${year} ${yearOffset} years ago`;
 }

@@ -12,95 +12,27 @@ export function calculateComfortScore(
     };
   }
 
-  let score = 100;
-  const reasons = [];
+  const comfortNeeds =
+    options.comfortNeeds || inferComfortNeeds(activityPreference, weather);
+  const featureSummary = options.featureSummary || {};
 
-  const temp = Number(weather.temperature);
-  const humidity = Number(weather.humidity);
-  const isRainy = Boolean(weather.rain);
-  const isIndoor = place.category === "indoor";
-  const isOutdoor = place.category === "outdoor";
+  // Weighted 100-point model:
+  // temperature 35, humidity 20, rain 20, preference 15, activity/place type 10.
+  const factors = [
+    calculateTemperatureFactor(weather.temperature),
+    calculateHumidityFactor(weather.humidity),
+    calculateRainFactor(weather.rain, place),
+    calculatePreferenceFactor(activityPreference, place, weather, {
+      comfortNeeds,
+      featureSummary,
+    }),
+    calculateActivityTypeFactor(place, placeType),
+  ];
 
-  if (temp < 20) {
-    score -= (20 - temp) * 3;
-    reasons.push("temperature is colder than ideal");
-  } else if (temp > 24) {
-    score -= (temp - 24) * 3;
-    reasons.push("temperature is warmer than ideal");
-  } else {
-    reasons.push("temperature is comfortable");
-  }
-
-  if (humidity < 40) {
-    score -= (40 - humidity) * 0.5;
-  } else if (humidity > 60) {
-    score -= (humidity - 60) * 0.5;
-    reasons.push("humidity is slightly high");
-  } else {
-    reasons.push("humidity is comfortable");
-  }
-
-  if (isRainy) {
-    if (isOutdoor) {
-      score -= 25;
-      reasons.push("rain is not suitable for outdoor places");
-    }
-
-    if (isIndoor) {
-      score += 12;
-      reasons.push("indoor place is better during rain");
-    }
-  }
-
-  if (!isRainy && isOutdoor && temp >= 20 && temp <= 24) {
-    score += 8;
-    reasons.push("outdoor conditions are pleasant");
-  }
-
-  if (activityPreference === "Cycling") {
-    if (isRainy) score -= 20;
-  }
-
-  if (activityPreference === "Walking") {
-    if (temp >= 20 && temp <= 24 && !isRainy) score += 8;
-  }
-
-  if (activityPreference === "Photography") {
-    if (!isRainy) score += 8;
-    if (isRainy) score -= 15;
-  }
-
-  if (activityPreference === "Food/Cafe") {
-    if (isIndoor) score += 15;
-  }
-
-  if (activityPreference === "Indoor visit" || activityPreference === "Indoor Activity") {
-    if (isIndoor) score += 18;
-    if (isOutdoor) score -= 8;
-  }
-
-  if (activityPreference === "Family activity") {
-    if (!isRainy && temp >= 18 && temp <= 26) {
-      score += 10;
-    } else {
-      score -= 8;
-    }
-  }
-
-  if (placeType === "Indoor" && isIndoor) score += 10;
-  if (placeType === "Outdoor" && isOutdoor) score += 10;
-  if (placeType === "Food/Cafe" && isIndoor) score += 10;
-
-  const enhancement = enhanceComfortScore(place, weather, {
-    comfortNeeds: options.comfortNeeds || inferComfortNeeds(activityPreference, weather),
-    featureSummary: options.featureSummary,
-    distanceFromSelectedKm: options.distanceFromSelectedKm,
-  });
-
-  score += enhancement.scoreDelta;
-  reasons.push(...enhancement.reasons);
-
-  score = Math.max(0, Math.min(100, Math.round(score)));
+  const score = clampScore(
+    factors.reduce((total, factor) => total + factor.score, 0)
+  );
+  const reasons = factors.flatMap((factor) => factor.reasons).filter(Boolean);
 
   return {
     score,
@@ -150,77 +82,19 @@ export function inferComfortNeeds(activityPreference, weather) {
 }
 
 export function enhanceComfortScore(place, weather, options = {}) {
-  const comfortNeeds = options.comfortNeeds || createComfortNeeds("none");
-  const featureSummary = options.featureSummary || {};
-  const distanceFromSelectedKm = Number(options.distanceFromSelectedKm);
-  const scoreChanges = [];
-  const reasons = [];
-  const temp = Number(weather?.temperature);
-  const isHot = Number.isFinite(temp) && temp >= 26;
-  const isStressful = isUncomfortableWeather(weather);
-
-  if (Number.isFinite(distanceFromSelectedKm) && distanceFromSelectedKm > 0) {
-    const distancePenalty = Math.min(distanceFromSelectedKm * 4, 12);
-    scoreChanges.push(-distancePenalty);
-    reasons.push(`${place.name} is ${distanceFromSelectedKm.toFixed(1)} km from the selected place`);
-  }
-
-  if (comfortNeeds.water) {
-    applyFeatureBonus({
-      feature: featureSummary.water,
-      missingPenalty: -12,
-      closeBonus: isHot ? 24 : 18,
-      mediumBonus: isHot ? 17 : 12,
-      farBonus: 6,
-      closeText: "public drinking water is very close",
-      mediumText: "public drinking water is nearby",
-      farText: "public drinking water is available but farther away",
-      missingText: "no public drinking water source was found nearby",
-      scoreChanges,
-      reasons,
-    });
-  }
-
-  if (comfortNeeds.shade) {
-    applyFeatureBonus({
-      feature: featureSummary.shade,
-      missingPenalty: -8,
-      closeBonus: isHot ? 21 : 15,
-      mediumBonus: isHot ? 15 : 10,
-      farBonus: 5,
-      closeText: "shade or green space is very close",
-      mediumText: "shade or green space is nearby",
-      farText: "shade or green space is available but farther away",
-      missingText: "no shaded or green support was found nearby",
-      scoreChanges,
-      reasons,
-    });
-  }
-
-  if (comfortNeeds.indoor) {
-    const indoorFeature = featureSummary.indoor;
-
-    if (place.category === "indoor") {
-      scoreChanges.push(isStressful ? 20 : 12);
-      reasons.push("the place itself is indoor or sheltered");
-    } else if (indoorFeature) {
-      const indoorDistance = Number(indoorFeature.distanceKm);
-      if (indoorDistance <= 0.5) {
-        scoreChanges.push(isStressful ? 16 : 10);
-        reasons.push("an indoor backup is nearby");
-      } else {
-        scoreChanges.push(4);
-        reasons.push("an indoor backup is available but farther away");
-      }
-    } else if (isStressful) {
-      scoreChanges.push(-10);
-      reasons.push("no indoor backup was found nearby");
+  const factor = calculatePreferenceFactor(
+    options.activityPreference || "All",
+    place,
+    weather,
+    {
+      comfortNeeds: options.comfortNeeds || createComfortNeeds("none"),
+      featureSummary: options.featureSummary || {},
     }
-  }
+  );
 
   return {
-    scoreDelta: scoreChanges.reduce((total, value) => total + value, 0),
-    reasons,
+    scoreDelta: factor.score,
+    reasons: factor.reasons,
   };
 }
 
@@ -259,6 +133,376 @@ export function satisfiesRequiredComfortPreference(item) {
   return true;
 }
 
+function calculateTemperatureFactor(value) {
+  const temp = Number(value);
+
+  if (!Number.isFinite(temp)) {
+    return {
+      score: 18,
+      reasons: ["temperature data is unavailable"],
+    };
+  }
+
+  if (temp >= 20 && temp <= 24) {
+    return {
+      score: 35,
+      reasons: [`temperature is ideal at ${formatNumber(temp)} C`],
+    };
+  }
+
+  if (temp >= 18 && temp < 20) {
+    return {
+      score: 30,
+      reasons: [`temperature is slightly cool at ${formatNumber(temp)} C`],
+    };
+  }
+
+  if (temp > 24 && temp <= 26) {
+    return {
+      score: 30,
+      reasons: [`temperature is slightly warm at ${formatNumber(temp)} C`],
+    };
+  }
+
+  if (temp >= 15 && temp < 18) {
+    return {
+      score: 22,
+      reasons: [`temperature is cool at ${formatNumber(temp)} C`],
+    };
+  }
+
+  if (temp > 26 && temp <= 30) {
+    return {
+      score: 22,
+      reasons: [`temperature is warm at ${formatNumber(temp)} C`],
+    };
+  }
+
+  return {
+    score: 10,
+    reasons: [`temperature is uncomfortable at ${formatNumber(temp)} C`],
+  };
+}
+
+function calculateHumidityFactor(value) {
+  const humidity = Number(value);
+
+  if (!Number.isFinite(humidity)) {
+    return {
+      score: 10,
+      reasons: ["humidity data is unavailable"],
+    };
+  }
+
+  if (humidity >= 40 && humidity <= 60) {
+    return {
+      score: 20,
+      reasons: [`humidity is comfortable at ${formatNumber(humidity)}%`],
+    };
+  }
+
+  if (humidity >= 30 && humidity < 40) {
+    return {
+      score: 15,
+      reasons: [`humidity is slightly dry at ${formatNumber(humidity)}%`],
+    };
+  }
+
+  if (humidity > 60 && humidity <= 70) {
+    return {
+      score: 15,
+      reasons: [`humidity is slightly high at ${formatNumber(humidity)}%`],
+    };
+  }
+
+  if (humidity >= 20 && humidity < 30) {
+    return {
+      score: 10,
+      reasons: [`humidity is dry at ${formatNumber(humidity)}%`],
+    };
+  }
+
+  if (humidity > 70 && humidity <= 80) {
+    return {
+      score: 10,
+      reasons: [`humidity is high at ${formatNumber(humidity)}%`],
+    };
+  }
+
+  return {
+    score: 5,
+    reasons: [`humidity is uncomfortable at ${formatNumber(humidity)}%`],
+  };
+}
+
+function calculateRainFactor(rain, place) {
+  const isRainy = Boolean(rain);
+  const isIndoor = place?.category === "indoor";
+  const isOutdoor = place?.category === "outdoor";
+
+  if (!isRainy) {
+    return {
+      score: 20,
+      reasons: ["there is no rain"],
+    };
+  }
+
+  if (isIndoor) {
+    return {
+      score: 14,
+      reasons: ["rain is less problematic because the place is indoor"],
+    };
+  }
+
+  if (isOutdoor) {
+    return {
+      score: 3,
+      reasons: ["rain strongly reduces comfort for outdoor places"],
+    };
+  }
+
+  return {
+    score: 8,
+    reasons: ["rain reduces outdoor comfort"],
+  };
+}
+
+function calculatePreferenceFactor(
+  activityPreference,
+  place,
+  weather,
+  { comfortNeeds, featureSummary }
+) {
+  const normalized = String(activityPreference || "All").trim().toLowerCase();
+  const isRainy = Boolean(weather?.rain);
+  const temp = Number(weather?.temperature);
+  const supportCount = [
+    featureSummary?.water,
+    featureSummary?.shade,
+    featureSummary?.indoor,
+  ].filter(Boolean).length;
+
+  if (normalized === "all") {
+    if (supportCount >= 2) {
+      return {
+        score: 15,
+        reasons: ["multiple comfort-support options are nearby"],
+      };
+    }
+
+    if (supportCount === 1) {
+      return {
+        score: 12,
+        reasons: ["one comfort-support option is nearby"],
+      };
+    }
+
+    return {
+      score: 8,
+      reasons: ["general activity preference has limited nearby support"],
+    };
+  }
+
+  if (normalized === "nearby drinking water") {
+    return featureSummary?.water
+      ? {
+          score: 15,
+          reasons: ["selected preference is supported by nearby drinking water"],
+        }
+      : {
+          score: 0,
+          reasons: ["selected preference needs drinking water, but none was found nearby"],
+        };
+  }
+
+  if (normalized === "shaded area") {
+    return featureSummary?.shade
+      ? {
+          score: 15,
+          reasons: ["selected preference is supported by nearby shade or green space"],
+        }
+      : {
+          score: 0,
+          reasons: ["selected preference needs shade, but no shade support was found nearby"],
+        };
+  }
+
+  if (normalized === "indoor activity" || normalized === "indoor visit") {
+    if (place?.category === "indoor") {
+      return {
+        score: 15,
+        reasons: ["selected preference matches an indoor place"],
+      };
+    }
+
+    if (featureSummary?.indoor) {
+      return {
+        score: 12,
+        reasons: ["selected preference has an indoor backup nearby"],
+      };
+    }
+
+    return {
+      score: 0,
+      reasons: ["selected preference needs indoor support, but none was found nearby"],
+    };
+  }
+
+  if (normalized === "walking" || normalized === "sightseeing") {
+    return !isRainy && Number.isFinite(temp) && temp >= 18 && temp <= 26
+      ? {
+          score: 15,
+          reasons: ["selected activity is suitable for walking or sightseeing"],
+        }
+      : {
+          score: 6,
+          reasons: ["selected activity is less comfortable in the current weather"],
+        };
+  }
+
+  if (normalized === "cycling") {
+    return !isRainy && Number.isFinite(temp) && temp >= 16 && temp <= 26
+      ? {
+          score: 15,
+          reasons: ["selected activity is suitable for cycling"],
+        }
+      : {
+          score: 5,
+          reasons: ["selected activity is less suitable for cycling right now"],
+        };
+  }
+
+  if (normalized === "photography" || normalized === "relaxing") {
+    return !isRainy
+      ? {
+          score: 15,
+          reasons: ["selected activity benefits from dry weather"],
+        }
+      : {
+          score: 5,
+          reasons: ["selected activity is less comfortable during rain"],
+        };
+  }
+
+  if (normalized === "family activity") {
+    return !isRainy && Number.isFinite(temp) && temp >= 18 && temp <= 26
+      ? {
+          score: 15,
+          reasons: ["selected family activity fits the current weather"],
+        }
+      : {
+          score: 6,
+          reasons: ["selected family activity is less comfortable right now"],
+        };
+  }
+
+  if (normalized === "food/cafe") {
+    return place?.category === "indoor"
+      ? {
+          score: 15,
+          reasons: ["selected preference matches an indoor food or cafe option"],
+        }
+      : {
+          score: 9,
+          reasons: ["selected preference has a partial match"],
+        };
+  }
+
+  if (comfortNeeds?.weatherStress && supportCount > 0) {
+    return {
+      score: 12,
+      reasons: ["selected preference has useful support in stressful weather"],
+    };
+  }
+
+  return {
+    score: 10,
+    reasons: ["selected preference is generally acceptable"],
+  };
+}
+
+function calculateActivityTypeFactor(place, placeType) {
+  const normalized = String(placeType || "All").trim().toLowerCase();
+  const category = String(place?.category || "mixed").toLowerCase();
+  const types = Array.isArray(place?.types) ? place.types : [];
+
+  if (!normalized || normalized === "all") {
+    return {
+      score: 8,
+      reasons: ["no strict place type filter was selected"],
+    };
+  }
+
+  if (normalized === "outdoor") {
+    return category === "outdoor"
+      ? {
+          score: 10,
+          reasons: ["selected activity type matches an outdoor place"],
+        }
+      : {
+          score: 4,
+          reasons: ["selected activity type prefers outdoor places"],
+        };
+  }
+
+  if (normalized === "indoor") {
+    return category === "indoor"
+      ? {
+          score: 10,
+          reasons: ["selected activity type matches an indoor place"],
+        }
+      : {
+          score: 4,
+          reasons: ["selected activity type prefers indoor places"],
+        };
+  }
+
+  if (normalized === "food/cafe") {
+    return hasAnyType(types, ["cafe", "restaurant", "bakery", "bar"])
+      ? {
+          score: 10,
+          reasons: ["selected activity type matches a food or cafe place"],
+        }
+      : {
+          score: 5,
+          reasons: ["selected activity type has a limited match"],
+        };
+  }
+
+  if (normalized === "historical") {
+    return hasAnyType(types, ["museum", "church", "tourist_attraction"])
+      ? {
+          score: 10,
+          reasons: ["selected activity type matches a historical or cultural place"],
+        }
+      : {
+          score: 5,
+          reasons: ["selected activity type has a limited historical match"],
+        };
+  }
+
+  if (
+    normalized === "park / garden" ||
+    normalized === "public space" ||
+    normalized === "recreational area"
+  ) {
+    return category === "outdoor" || hasAnyType(types, ["park", "garden"])
+      ? {
+          score: 10,
+          reasons: ["selected activity type matches an outdoor public place"],
+        }
+      : {
+          score: 5,
+          reasons: ["selected activity type has a limited outdoor match"],
+        };
+  }
+
+  return {
+    score: 6,
+    reasons: ["selected activity type is partially matched"],
+  };
+}
+
 function createComfortNeeds(mode, overrides = {}) {
   const water = Boolean(overrides.water);
   const shade = Boolean(overrides.shade);
@@ -272,39 +516,6 @@ function createComfortNeeds(mode, overrides = {}) {
     any: water || shade || indoor,
     weatherStress: Boolean(overrides.weatherStress),
   };
-}
-
-function applyFeatureBonus({
-  feature,
-  missingPenalty,
-  closeBonus,
-  mediumBonus,
-  farBonus,
-  closeText,
-  mediumText,
-  farText,
-  missingText,
-  scoreChanges,
-  reasons,
-}) {
-  if (!feature) {
-    scoreChanges.push(missingPenalty);
-    reasons.push(missingText);
-    return;
-  }
-
-  const distanceKm = Number(feature.distanceKm);
-
-  if (distanceKm <= 0.3) {
-    scoreChanges.push(closeBonus);
-    reasons.push(closeText);
-  } else if (distanceKm <= 0.5) {
-    scoreChanges.push(mediumBonus);
-    reasons.push(mediumText);
-  } else {
-    scoreChanges.push(farBonus);
-    reasons.push(farText);
-  }
 }
 
 function isUncomfortableWeather(weather) {
@@ -321,15 +532,33 @@ function isUncomfortableWeather(weather) {
 }
 
 function createReason(place, score, reasons) {
-  const reasonText = reasons.filter(Boolean).slice(0, 5).join(", ");
+  const reasonText =
+    reasons.filter(Boolean).slice(0, 6).join(", ") ||
+    "available weather and preference data are acceptable";
 
   if (score >= 85) {
     return `${place.name} is highly recommended because ${reasonText}.`;
   }
 
   if (score >= 65) {
-    return `${place.name} is a suitable option, but ${reasonText}.`;
+    return `${place.name} is a suitable option because ${reasonText}.`;
   }
 
   return `${place.name} is less suitable right now because ${reasonText}.`;
+}
+
+function hasAnyType(types, expectedTypes) {
+  return types.some((type) => expectedTypes.includes(type));
+}
+
+function clampScore(value) {
+  return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+}
+
+function formatNumber(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) return "unknown";
+
+  return Number.isInteger(number) ? String(number) : number.toFixed(1);
 }
