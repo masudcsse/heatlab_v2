@@ -4,6 +4,15 @@ import {
   getComfortRecommendation,
 } from "../utils/comfortScore";
 
+function getUvLabel(uv) {
+  if (uv == null) return "Unavailable";
+  if (uv <= 2) return "Low";
+  if (uv <= 5) return "Moderate";
+  if (uv <= 7) return "High";
+  if (uv <= 10) return "Very High";
+  return "Extreme";
+}
+
 function SelectedPlaceWeatherCard({ item }) {
   if (!item) return null;
 
@@ -26,18 +35,31 @@ function SelectedPlaceWeatherCard({ item }) {
               <span>Temperature</span>
               <strong>{item.weather.temperature}°C</strong>
             </div>
+
             <div>
               <span>Humidity</span>
               <strong>{item.weather.humidity}%</strong>
             </div>
+
             <div>
               <span>Pressure</span>
               <strong>{item.weather.pressure} hPa</strong>
             </div>
+
             <div>
               <span>Rain</span>
               <strong>{item.weather.rain ? "Yes" : "No"}</strong>
             </div>
+
+            <div>
+              <span>UV Index</span>
+              <strong>
+                {item.weather.uvIndex != null
+                  ? `${item.weather.uvIndex} (${getUvLabel(item.weather.uvIndex)})`
+                  : "Unavailable"}
+              </strong>
+            </div>
+
             <div className={`recommendation-metric recommendation-${recommendation.tone}`}>
               <span>Recommendation</span>
               <strong>{formatComfortRecommendationLabel(item.comfortScore)}</strong>

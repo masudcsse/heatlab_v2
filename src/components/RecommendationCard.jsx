@@ -4,6 +4,15 @@ import {
   getComfortRecommendation,
 } from "../utils/comfortScore";
 
+function getUvLabel(uv) {
+  if (uv == null) return "Unavailable";
+  if (uv <= 2) return "Low";
+  if (uv <= 5) return "Moderate";
+  if (uv <= 7) return "High";
+  if (uv <= 10) return "Very High";
+  return "Extreme";
+}
+
 function RecommendationCard({ recommendation }) {
   if (!recommendation) return null;
 
@@ -27,6 +36,16 @@ function RecommendationCard({ recommendation }) {
               {formatComfortRecommendationLabel(recommendation.comfortScore)}
             </span>
           </div>
+
+          {recommendation.weather?.uvIndex != null && (
+            <div className="badge-row">
+              <span className="badge badge-blue">
+                UV {recommendation.weather.uvIndex} (
+                {getUvLabel(recommendation.weather.uvIndex)})
+              </span>
+            </div>
+          )}
+
           <p className="recommendation-summary">
             {comfortRecommendation.summary}
           </p>

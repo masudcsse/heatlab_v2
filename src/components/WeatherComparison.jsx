@@ -4,6 +4,15 @@ import {
   getComfortRecommendation,
 } from "../utils/comfortScore";
 
+function getUvLabel(uv) {
+  if (uv == null) return "Unavailable";
+  if (uv <= 2) return "Low";
+  if (uv <= 5) return "Moderate";
+  if (uv <= 7) return "High";
+  if (uv <= 10) return "Very High";
+  return "Extreme";
+}
+
 function WeatherComparison({ places }) {
   return (
     <section className="section">
@@ -22,6 +31,7 @@ function WeatherComparison({ places }) {
               <th>Humidity</th>
               <th>Pressure</th>
               <th>Rain</th>
+              <th>UV</th>
               <th>Station Distance</th>
               <th>Comfort Support</th>
               <th>Recommendation</th>
@@ -37,6 +47,7 @@ function WeatherComparison({ places }) {
                 <td>{item.weather ? `${item.weather.humidity}%` : "N/A"}</td>
                 <td>{item.weather ? `${item.weather.pressure} hPa` : "N/A"}</td>
                 <td>{item.weather ? (item.weather.rain ? "Yes" : "No") : "N/A"}</td>
+                <td>{formatUv(item)}</td>
                 <td>
                   {item.weather ? `${item.weather.stationDistanceKm} km` : "N/A"}
                 </td>
@@ -49,6 +60,14 @@ function WeatherComparison({ places }) {
       </div>
     </section>
   );
+}
+
+function formatUv(item) {
+  const uv = item.weather?.uvIndex;
+
+  if (uv == null) return "N/A";
+
+  return `${uv} (${getUvLabel(uv)})`;
 }
 
 function formatRecommendation(item) {

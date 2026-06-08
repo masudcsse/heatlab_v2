@@ -4,6 +4,15 @@ import {
   getComfortRecommendation,
 } from "../utils/comfortScore";
 
+function getUvLabel(uv) {
+  if (uv == null) return "Unavailable";
+  if (uv <= 2) return "Low";
+  if (uv <= 5) return "Moderate";
+  if (uv <= 7) return "High";
+  if (uv <= 10) return "Very High";
+  return "Extreme";
+}
+
 function NearbyPlacesList({ places }) {
   return (
     <section className="section">
@@ -37,15 +46,28 @@ function NearbyPlacesList({ places }) {
                   <div className="metrics-grid">
                     <div>
                       <span>Temp</span>
-                    <strong>{item.weather.temperature}°C</strong>
+                      <strong>{item.weather.temperature}°C</strong>
                     </div>
+
                     <div>
                       <span>Humidity</span>
                       <strong>{item.weather.humidity}%</strong>
                     </div>
+
                     <div>
                       <span>Rain</span>
                       <strong>{item.weather.rain ? "Yes" : "No"}</strong>
+                    </div>
+
+                    <div>
+                      <span>UV</span>
+                      <strong>
+                        {item.weather.uvIndex != null
+                          ? `${item.weather.uvIndex} (${getUvLabel(
+                              item.weather.uvIndex
+                            )})`
+                          : "N/A"}
+                      </strong>
                     </div>
                   </div>
                 ) : (

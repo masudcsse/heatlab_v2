@@ -3,6 +3,7 @@ import {
   getHistoricalWeatherComparison,
   getHistoricalWeatherOptions,
 } from "./historicalWeather.js";
+import { getUvForecast } from "./dwdUvService.js";
 
 const DEFAULT_PORT = 5000;
 const DEFAULT_RADIUS_KM = 10;
@@ -109,6 +110,7 @@ export async function getNetatmoPublicWeather(lat, lng) {
   const radiusKm = normalizeRadiusKm(
     process.env.NETATMO_SEARCH_RADIUS_KM || DEFAULT_RADIUS_KM
   );
+
   const nearest = (await getNetatmoPublicStations(lat, lng, radiusKm))
     .filter((station) => station && Number.isFinite(station.temperature))
     .sort((a, b) => a.stationDistanceKm - b.stationDistanceKm)[0];
@@ -117,7 +119,21 @@ export async function getNetatmoPublicWeather(lat, lng) {
     throw createHttpError("No public Netatmo temperature station found near this place.", 404);
   }
 
-  return nearest;
+  let uv = null;
+
+  try {
+    uv = await getUvForecast();
+  } catch (error) {
+    console.error("DWD UV forecast unavailable:", error.message);
+  }
+
+  return {
+    ...nearest,
+    uvIndex: uv?.uvIndex ?? null,
+    uvTomorrow: uv?.uvTomorrow ?? null,
+    uvDayAfter: uv?.uvDayAfter ?? null,
+    uvSource: uv?.source ?? "DWD UV forecast",
+  };
 }
 
 export async function getNetatmoPublicStations(lat, lng, radiusKm = DEFAULT_RADIUS_KM) {
@@ -172,8 +188,8 @@ async function requestNetatmoPublicData(url, accessToken) {
       502
     );
   });
-  const payload = await readJsonResponse(response);
 
+  const payload = await readJsonResponse(response);
   return { response, payload };
 }
 
@@ -227,7 +243,8 @@ export async function getAccessToken({ forceRefresh = false } = {}) {
 
   cachedAccessToken = payload.access_token;
   cachedRefreshToken = payload.refresh_token || cachedRefreshToken;
-  accessTokenExpiresAt = Date.now() + Number(payload.expires_in || payload.expire_in || 3600) * 1000;
+  accessTokenExpiresAt =
+    Date.now() + Number(payload.expires_in || payload.expire_in || 3600) * 1000;
 
   return cachedAccessToken;
 }
@@ -276,7 +293,7 @@ function normalizeStation(station, targetLat, targetLng) {
   return {
     temperature: measurements.temperature,
     humidity: measurements.humidity,
-    windSpeed: measurements.windSpeed ?? 0,
+    windSpeed: measurements.windSpeed ?? null,
     pressure: measurements.pressure,
     rain: Boolean((measurements.rain60min ?? 0) > 0 || (measurements.rain24h ?? 0) > 0),
     stationId: station._id || "netatmo-public-station",
