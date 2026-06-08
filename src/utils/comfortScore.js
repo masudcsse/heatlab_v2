@@ -138,7 +138,7 @@ export function getComfortRecommendation(score) {
 
   if (value >= 55) {
     return {
-      label: "Use with caution",
+      label: "Moderate Comfort",
       tone: "caution",
       summary: "Some conditions may reduce comfort, so check the details before going.",
       reasonLead: "can be used with caution",
@@ -160,6 +160,15 @@ export function getComfortRecommendation(score) {
     summary: "Current weather or preference conditions do not fit this place well.",
     reasonLead: "is not recommended right now",
   };
+}
+
+export function formatComfortRecommendationLabel(score) {
+  const recommendation = getComfortRecommendation(score);
+  const scoreLabel = formatComfortScore(score);
+
+  return scoreLabel
+    ? `${recommendation.label} - ${scoreLabel}`
+    : recommendation.label;
 }
 
 export function satisfiesRequiredComfortPreference(item) {
@@ -602,6 +611,14 @@ function hasAnyType(types, expectedTypes) {
 
 function clampScore(value) {
   return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+}
+
+function formatComfortScore(score) {
+  const value = Number(score);
+
+  if (!Number.isFinite(value)) return null;
+
+  return `${Math.round(value)}/100`;
 }
 
 function formatNumber(value) {

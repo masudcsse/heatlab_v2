@@ -1,5 +1,8 @@
 import { createComfortFeatureMessages } from "../services/comfortFeaturesService";
-import { getComfortRecommendation } from "../utils/comfortScore";
+import {
+  formatComfortRecommendationLabel,
+  getComfortRecommendation,
+} from "../utils/comfortScore";
 
 function WeatherComparison({ places }) {
   return (
@@ -53,7 +56,7 @@ function formatRecommendation(item) {
 
   return (
     <span className={`badge badge-${recommendation.tone}`}>
-      {recommendation.label}
+      {formatComfortRecommendationLabel(item.comfortScore)}
     </span>
   );
 }

@@ -1,5 +1,8 @@
 import ComfortFeatureSummary from "./ComfortFeatureSummary";
-import { getComfortRecommendation } from "../utils/comfortScore";
+import {
+  formatComfortRecommendationLabel,
+  getComfortRecommendation,
+} from "../utils/comfortScore";
 
 function SelectedPlaceWeatherCard({ item }) {
   if (!item) return null;
@@ -37,7 +40,7 @@ function SelectedPlaceWeatherCard({ item }) {
             </div>
             <div className={`recommendation-metric recommendation-${recommendation.tone}`}>
               <span>Recommendation</span>
-              <strong>{recommendation.label}</strong>
+              <strong>{formatComfortRecommendationLabel(item.comfortScore)}</strong>
               <small>{recommendation.summary}</small>
             </div>
           </div>

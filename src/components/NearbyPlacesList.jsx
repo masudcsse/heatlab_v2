@@ -1,5 +1,8 @@
 import ComfortFeatureSummary from "./ComfortFeatureSummary";
-import { getComfortRecommendation } from "../utils/comfortScore";
+import {
+  formatComfortRecommendationLabel,
+  getComfortRecommendation,
+} from "../utils/comfortScore";
 
 function NearbyPlacesList({ places }) {
   return (
@@ -26,7 +29,7 @@ function NearbyPlacesList({ places }) {
                 <div className="badge-row">
                   <span className="badge badge-blue">{item.place.category}</span>
                   <span className={`badge badge-${recommendation.tone}`}>
-                    {recommendation.label}
+                    {formatComfortRecommendationLabel(item.comfortScore)}
                   </span>
                 </div>
 

@@ -1,5 +1,8 @@
 import ComfortFeatureSummary from "./ComfortFeatureSummary";
-import { getComfortRecommendation } from "../utils/comfortScore";
+import {
+  formatComfortRecommendationLabel,
+  getComfortRecommendation,
+} from "../utils/comfortScore";
 
 function RecommendationCard({ recommendation }) {
   if (!recommendation) return null;
@@ -21,7 +24,7 @@ function RecommendationCard({ recommendation }) {
               {recommendation.place.category}
             </span>
             <span className={`badge badge-${comfortRecommendation.tone}`}>
-              {comfortRecommendation.label}
+              {formatComfortRecommendationLabel(recommendation.comfortScore)}
             </span>
           </div>
           <p className="recommendation-summary">
