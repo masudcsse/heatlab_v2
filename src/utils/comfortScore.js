@@ -16,8 +16,6 @@ export function calculateComfortScore(
     options.comfortNeeds || inferComfortNeeds(activityPreference, weather);
   const featureSummary = options.featureSummary || {};
 
-  // Weighted 100-point model:
-  // temperature 35, humidity 20, rain 20, preference 15, activity/place type 10.
   const factors = [
     calculateTemperatureFactor(weather.temperature),
     calculateHumidityFactor(weather.humidity),
@@ -32,7 +30,13 @@ export function calculateComfortScore(
   const score = clampScore(
     factors.reduce((total, factor) => total + factor.score, 0)
   );
+
   const reasons = factors.flatMap((factor) => factor.reasons).filter(Boolean);
+
+  const uvReason = calculateUvReason(weather.uvIndex, featureSummary);
+  if (uvReason) {
+    reasons.push(uvReason);
+  }
 
   return {
     score,
@@ -141,7 +145,7 @@ export function getComfortRecommendation(score) {
       label: "Moderate Comfort",
       tone: "caution",
       summary: "Some conditions may reduce comfort, so check the details before going.",
-      reasonLead: "can be used with caution",
+      reasonLead: "has moderate comfort",
     };
   }
 
@@ -189,8 +193,6 @@ export function satisfiesRequiredComfortPreference(item) {
     return item?.place?.category === "indoor" || Boolean(features?.indoor);
   }
 
-  // All Activities should not require every support item, but it should avoid
-  // recommending places with no support features at all.
   if (comfortNeeds.mode === "all") {
     return Boolean(features?.water || features?.shade || features?.indoor);
   }
@@ -330,6 +332,36 @@ function calculateRainFactor(rain, place) {
     score: 8,
     reasons: ["rain reduces outdoor comfort"],
   };
+}
+
+function calculateUvReason(value, featureSummary = {}) {
+  const uv = Number(value);
+
+  if (!Number.isFinite(uv)) {
+    return null;
+  }
+
+  if (uv <= 2) {
+    return `UV exposure is low at index ${uv}`;
+  }
+
+  if (uv <= 5) {
+    return `UV exposure is moderate at index ${uv}`;
+  }
+
+  if (uv <= 7) {
+    return featureSummary?.shade
+      ? `UV exposure is high at index ${uv}, but nearby shade support is available`
+      : `UV exposure is high at index ${uv}, so sun protection is recommended`;
+  }
+
+  if (uv <= 10) {
+    return featureSummary?.shade
+      ? `UV exposure is very high at index ${uv}, but nearby shade support can help reduce sun exposure`
+      : `UV exposure is very high at index ${uv}, so outdoor exposure should be limited`;
+  }
+
+  return `UV exposure is extreme at index ${uv}`;
 }
 
 function calculatePreferenceFactor(
@@ -598,7 +630,7 @@ function isUncomfortableWeather(weather) {
 
 function createReason(place, score, reasons) {
   const reasonText =
-    reasons.filter(Boolean).slice(0, 6).join(", ") ||
+    reasons.filter(Boolean).slice(0, 7).join(", ") ||
     "available weather and preference data are acceptable";
   const recommendation = getComfortRecommendation(score);
 
